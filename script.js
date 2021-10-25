@@ -9,13 +9,85 @@ var GENESIS = '0x000000000000000000000000000000000000000000000000000000000000000
 
 // This is the ABI for your contract (get it from Remix, in the 'Compile' tab)
 // ============================================================
-var abi = []; // FIXME: fill this in with your contract's ABI //Be sure to only have one array, not two
+var abi = [
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "DEBTS",
+		"outputs": [
+			{
+				"internalType": "uint32",
+				"name": "",
+				"type": "uint32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "creditor",
+				"type": "address"
+			},
+			{
+				"internalType": "uint32",
+				"name": "amount",
+				"type": "uint32"
+			},
+			{
+				"internalType": "address[]",
+				"name": "cycle",
+				"type": "address[]"
+			}
+		],
+		"name": "add_iou",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "debtor",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "creditor",
+				"type": "address"
+			}
+		],
+		"name": "lookup",
+		"outputs": [
+			{
+				"internalType": "uint32",
+				"name": "ret",
+				"type": "uint32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]; // FIXME: fill this in with your contract's ABI //Be sure to only have one array, not two
 
 // ============================================================
 abiDecoder.addABI(abi);
 // call abiDecoder.decodeMethod to use this - see 'getAllFunctionCalls' for more
 
-var contractAddress = ''; // FIXME: fill this in with your contract's address/hash
+var contractAddress = '0x63C97C6660e22AF890CDEb33584eC08e3Fa8B55E'; // FIXME: fill this in with your contract's address/hash
 var BlockchainSplitwise = new web3.eth.Contract(abi, contractAddress);
 
 // =============================================================================
@@ -30,7 +102,19 @@ var BlockchainSplitwise = new web3.eth.Contract(abi, contractAddress);
 // OR
 //   - a list of everyone currently owing or being owed money
 async function getUsers() {
-
+    return getAllFunctionCalls(contractAddress, "add_iou").then(
+        (function_calls) => {
+            console.log(function_calls);
+            var users_list = [];
+            for(let call of function_calls) {
+                users_list.push(call.from);
+                users_list.push(call.args[0]);
+            }
+            return [...new Set(users_list)];
+        }
+    ).catch((error) => {
+        console.log("ERROR - ", error)
+    });
 }
 
 // TODO: Get the total amount owed by the user specified by 'user'
