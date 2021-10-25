@@ -30,7 +30,7 @@ var BlockchainSplitwise = new web3.eth.Contract(abi, contractAddress);
 // OR
 //   - a list of everyone currently owing or being owed money
 async function getUsers() {
-
+	const function_calls = getAllFunctionCalls(contractAddress, "add_IOU")
 }
 
 // TODO: Get the total amount owed by the user specified by 'user'
