@@ -16,25 +16,6 @@ var abi = [
 				"internalType": "address",
 				"name": "",
 				"type": "address"
-			}
-		],
-		"name": "Balances",
-		"outputs": [
-			{
-				"internalType": "uint32",
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			},
 			{
 				"internalType": "address",
@@ -99,25 +80,6 @@ var abi = [
 		],
 		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "lookup_user_balance",
-		"outputs": [
-			{
-				"internalType": "uint32",
-				"name": "ret",
-				"type": "uint32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
 	}
 ]; // FIXME: fill this in with your contract's ABI //Be sure to only have one array, not two
 
@@ -125,7 +87,7 @@ var abi = [
 abiDecoder.addABI(abi);
 // call abiDecoder.decodeMethod to use this - see 'getAllFunctionCalls' for more
 
-var contractAddress = '0xC64E10B29cBCbaFD129d51A474349e4D16b67a33'; // FIXME: fill this in with your contract's address/hash
+var contractAddress = '0x5c9B1614ACCf2162feb97499D99393194d79978a'; // FIXME: fill this in with your contract's address/hash
 var BlockchainSplitwise = new web3.eth.Contract(abi, contractAddress);
 
 // =============================================================================
@@ -237,7 +199,12 @@ async function getUsers() {
 
 // TODO: Get the total amount owed by the user specified by 'user'
 async function getTotalOwed(user) {
-    return BlockchainSplitwise.methods.lookup_user_balance(user.toLowerCase()).call({from: web3.eth.defaultAccount.toLowerCase()});
+    await reconstruct_world_state();
+    user = user.toLowerCase();
+    if(!(user in IOUs)) return 0;
+    var total_owed = 0;
+    for(let amount of Object.values(IOUs[user])) total_owed += amount;
+    return total_owed;
 }
 
 // TODO: Get the last time this user has sent or received an IOU, in seconds since Jan. 1, 1970
@@ -273,7 +240,7 @@ async function add_IOU(creditor, amount) {
     var cycle = await find_cycle_at_node(debtor);
     // discard the cycle if it doesn't resolve a change
     if(!resolve_cycle(cycle)) cycle = [];
-    return BlockchainSplitwise.methods.add_iou(creditor.toLowerCase(), amount, cycle).send({from: debtor});
+    return BlockchainSplitwise.methods.add_iou(creditor.toLowerCase(), amount, cycle).send({from: debtor, gas:3000000});
 }
 
 // =============================================================================
@@ -297,7 +264,8 @@ async function getAllFunctionCalls(addressOfContract, functionName) {
 			if(txn.to == null){continue;}
 	  	if (txn.to.toLowerCase() === addressOfContract.toLowerCase()) {
 	  		var func_call = abiDecoder.decodeMethod(txn.input);
-
+                // skip failed txs
+                if(!(await web3.eth.getTransactionReceipt(txn.hash)).status) continue;
 				// check that the function getting called in this txn is 'functionName'
 				if (func_call && func_call.name === functionName) {
 					var time = await web3.eth.getBlock(curBlock);
