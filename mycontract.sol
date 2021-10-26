@@ -10,18 +10,15 @@ contract Splitwise {
     mapping(address =>  mapping(address => uint32)) public IOUs;
 
     function lookup(address debtor, address creditor) external view returns (uint32 ret) {
-        // todo - check that debtor exists, creditor exists
         return IOUs[debtor][creditor];
     }
 
     function add_iou(address creditor, uint32 amount, address[] calldata cycle) external {
         address debtor = msg.sender;
         // store the new iou
-        // todo - verfy that it initializs to 0
         IOUs[debtor][creditor] += amount;
         // validate that the cycle exists
         uint256 cycle_size = cycle.length;
-        // todo - make sure this syntax is okay
         if(cycle_size < 1) return;
         // find the minimum in the cycle
         uint32 min_amount = 0xffffffff;

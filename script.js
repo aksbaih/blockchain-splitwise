@@ -87,7 +87,7 @@ var abi = [
 abiDecoder.addABI(abi);
 // call abiDecoder.decodeMethod to use this - see 'getAllFunctionCalls' for more
 
-var contractAddress = '0x5c9B1614ACCf2162feb97499D99393194d79978a'; // FIXME: fill this in with your contract's address/hash
+var contractAddress = '0xA47f628D03fCa0Ab25528ea681c4297E3A8f9A7a'; // FIXME: fill this in with your contract's address/hash
 var BlockchainSplitwise = new web3.eth.Contract(abi, contractAddress);
 
 // =============================================================================
@@ -109,26 +109,24 @@ async function get_node_neighbors(node) {
 
 async function find_cycle_at_node(node) {
     // remove last element in the cycle because it's the same as the first
-    var cycle = await doBFS(node, node, get_node_neighbors);
+    var cycle = await doBFS(node.toLowerCase(), node.toLowerCase(), get_node_neighbors);
     if(cycle === null) return null;
     return cycle.slice(0, -1);
 }
 
 function get_iou_value(debtor, creditor) {
-    console.log(debtor, creditor);
+    debtor = debtor.toLowerCase();
+    creditor = creditor.toLowerCase();
+    console.log("getting", debtor, "to", creditor);
     if(!(debtor in IOUs)) return 0;
     if(!(creditor in IOUs[debtor])) return 0;
-    console.log(IOUs[debtor][creditor]);
+    console.log("got", IOUs[debtor][creditor]);
     return IOUs[debtor][creditor];
-//    for(let iou of IOUs) {
-//        if(iou["debtor"] === debtor && iou["creditor"] === creditor)
-//            return iou["value"];
-//    }
-//    return 0;
 }
 
 function resolve_cycle(cycle) {
     // halt if the cycle is ill-defined
+    console.log("resolving", cycle);
     if(cycle === null) return false;
     let cycle_length = cycle.length;
     if(cycle_length < 2) return false;
@@ -139,7 +137,7 @@ function resolve_cycle(cycle) {
         if(value < minimum_amount) minimum_amount = value;
     }
     // halt if there's no positive minimum
-    console.log(minimum_amount);
+    console.log("resolving a min of ", minimum_amount);
     if(minimum_amount < 1) return false;
     // subtract the minimum from the cycle
     for(var i = 0; i < cycle_length; i++) {
@@ -150,6 +148,8 @@ function resolve_cycle(cycle) {
 }
 
 function add_iou_local(debtor, creditor, amount) {
+    debtor = debtor.toLowerCase();
+    creditor = creditor.toLowerCase();
     if(!(debtor in IOUs)) IOUs[debtor] = {};
     if(!(creditor in IOUs[debtor])) IOUs[debtor][creditor] = 0;
     IOUs[debtor][creditor] += parseInt(amount);
@@ -159,14 +159,14 @@ async function reconstruct_world_state() {
     return getAllFunctionCalls(contractAddress, "add_iou").then(
         function_calls => {
             console.log("before sorting, ", function_calls);
-            function_calls.sort((a, b) => (a.t < b.t) ? 1 : -1);
+            function_calls.sort((a, b) => (a.t > b.t) ? 1 : -1);
             console.log("after sorting, ", function_calls);
             IOUs = {};
             for(let call of function_calls) {
                 // add the iou
                 add_iou_local(call.from, call.args[0], call.args[1]);
                 // find any emergent cycle
-                let cycle = find_cycle_at_node(call.from);
+//                let cycle = find_cycle_at_node(call.from.toLowerCase());
                 resolve_cycle(call.args[2]);
             }
             console.log("state of the world: ", IOUs);
@@ -240,7 +240,7 @@ async function add_IOU(creditor, amount) {
     var cycle = await find_cycle_at_node(debtor);
     // discard the cycle if it doesn't resolve a change
     if(!resolve_cycle(cycle)) cycle = [];
-    return BlockchainSplitwise.methods.add_iou(creditor.toLowerCase(), amount, cycle).send({from: debtor, gas:3000000});
+    return BlockchainSplitwise.methods.add_iou(creditor.toLowerCase(), amount, cycle).send({from: debtor.toLowerCase(), gas:3000000});
 }
 
 // =============================================================================
